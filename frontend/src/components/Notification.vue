@@ -6,7 +6,7 @@
 import { ref } from 'vue'
 const visible = ref(false)
 const message = ref('')
-const type = ref('info') // info, success, error
+const type = ref('info')
 
 function show({ message: m, type: t = 'info', timeout = 3000 }) {
     message.value = m

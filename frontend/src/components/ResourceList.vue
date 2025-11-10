@@ -4,7 +4,7 @@
             <input v-model="filters.q" placeholder="Pesquisar por título/autor..." @input="applyFilters" />
             <input type="date" v-model="filters.from" @change="applyFilters" />
             <input type="date" v-model="filters.to" @change="applyFilters" />
-            <button @click="openForm(null)">Criar recurso</button>
+            <button @click="openForm(null)" class="">Criar recurso</button>
         </div>
 
         <div v-if="loading">Carregando...</div>
@@ -144,5 +144,9 @@ td {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.black-color{
+    color: black;
 }
 </style>

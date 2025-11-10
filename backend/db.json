@@ -1,0 +1,86 @@
+{
+    "usuarios": [
+        {
+            "id": 1,
+            "nome": "João Silva",
+            "email": "joao@example.com",
+            "role": "admin"
+        },
+        {
+            "id": 2,
+            "nome": "Maria Souza",
+            "email": "maria@example.com",
+            "role": "user"
+        },
+        {
+            "id": 3,
+            "nome": "Rafael Almeida",
+            "email": "rafael@example.com",
+            "role": "user"
+        }
+    ],
+    "posts": [
+        {
+            "id": 1,
+            "usuarioId": 1,
+            "titulo": "Introdução ao Vue",
+            "conteudo": "Vue é um framework progressivo para construção de interfaces.",
+            "likes": 12
+        },
+        {
+            "id": 2,
+            "usuarioId": 2,
+            "titulo": "Por que usar Node?",
+            "conteudo": "Node permite escrever backend usando JavaScript.",
+            "likes": 5
+        },
+        {
+            "id": 3,
+            "usuarioId": 1,
+            "titulo": "Meu setup de trabalho",
+            "conteudo": "Uso VS Code, WSL e Docker.",
+            "likes": 20
+        }
+    ],
+    "produtos": [
+        {
+            "id": 1,
+            "nome": "Teclado Mecânico",
+            "preco": 350.90,
+            "estoque": 12
+        },
+        {
+            "id": 2,
+            "nome": "Mouse Gamer",
+            "preco": 129.50,
+            "estoque": 30
+        },
+        {
+            "id": 3,
+            "nome": "Monitor 27\"",
+            "preco": 1499.99,
+            "estoque": 5
+        }
+    ],
+    "pedidos": [
+        {
+            "id": 1,
+            "usuarioId": 2,
+            "produtos": [
+                1,
+                2
+            ],
+            "total": 480.40,
+            "status": "enviado"
+        },
+        {
+            "id": 2,
+            "usuarioId": 3,
+            "produtos": [
+                3
+            ],
+            "total": 1499.99,
+            "status": "processando"
+        }
+    ]
+}

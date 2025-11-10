@@ -1,7 +1,7 @@
 <template>
     <div class="form-card">
-        <h3>{{ isEdit ? 'Editar recurso' : 'Criar recurso' }}</h3>
-        <form @submit.prevent="submit">
+        <h3 class="black-color">{{ isEdit ? 'Editar recurso' : 'Criar recurso' }}</h3>
+        <form @submit.prevent="submit" class="black-color">
             <div>
                 <label>Título</label>
                 <input v-model="local.titulo" />
