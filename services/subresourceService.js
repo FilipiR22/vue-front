@@ -1,20 +1,24 @@
 import api from './api'
 
-const resourceBase = '/resources'
+const resourceBase = '/subresources'
 
 export default {
-    list(params) { // params é um objeto para filtros/paginação
+    list(params) {
         return api.get(resourceBase, { params })
     },
-    get(id) {
-        return api.get(`${resourceBase}/${id}`)
+
+    listByResource(resourceId) {
+        return api.get(resourceBase, { params: { resourceId } })
     },
+
     create(data) {
         return api.post(resourceBase, data)
     },
+
     update(id, data) {
         return api.put(`${resourceBase}/${id}`, data)
     },
+
     remove(id) {
         return api.delete(`${resourceBase}/${id}`)
     }
