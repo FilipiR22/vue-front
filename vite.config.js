@@ -4,10 +4,10 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [vue()],
+  base: '/vue-front/',  // importante para GitHub Pages (nome do repo)
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
     }
-  },
-  base:'vue-front'
+  }
 })
