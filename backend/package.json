@@ -1,0 +1,20 @@
+{
+  "type": "module",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "node": "^20.19.4",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "scripts": {
+    "dev": "nodemon server.js",
+    "rebuild:linux": "npm cache clean --force && rm -rf node_modules package-lock.json && npm install && npm run dev",
+    "rebuild:win": "npm cache clean --force && rmdir /s /q node_modules && del package-lock.json && npm install && npm run dev"
+  }
+}
