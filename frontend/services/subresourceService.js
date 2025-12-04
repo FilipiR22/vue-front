@@ -1,6 +1,6 @@
 import api from './api'
 
-const resourceBase = '/subresources'
+const resourceBase = '/subrecurso'
 
 export default {
     list(params) {

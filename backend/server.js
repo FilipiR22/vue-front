@@ -1,30 +1,33 @@
 import express from 'express';
 import sequelize from './database.js';
-import mensagemRoutes from './routes/mensagens.js';
+import recursoRoutes from './routes/recurso.js';
 import usuarioRoutes from './routes/usuario.js';
 import authRoutes from './routes/auth.js';
 import authMiddleware from './middlewares/authMiddleware.js';
-import comentariosRoutes from './routes/comentario.js';
+import subrecursoRoutes from './routes/subrecurso.js';
+import aplicarAssociacoes from './models/associacoes.js';
+aplicarAssociacoes();
+
 
 // Importe os modelos
 import Usuario from './models/usuario.js';
-import Mensagens from './models/mensagens.js';
-import Comentario from './models/comentario.js';
+import Recurso from './models/recurso.js';
+import Subrecurso from './models/subrecurso.js';
 
 // Defina os relacionamentos aqui
-Comentario.belongsTo(Usuario, { foreignKey: 'idusuario' });
-Comentario.belongsTo(Mensagens, { foreignKey: 'idmensagem' });
-Mensagens.hasMany(Comentario, { foreignKey: 'idmensagem' });
-Usuario.hasMany(Comentario, { foreignKey: 'idusuario' });
+Subrecurso.belongsTo(Usuario, { foreignKey: 'idusuario' });
+Subrecurso.belongsTo(Recurso, { foreignKey: 'idrecurso' });
+Recurso.hasMany(Subrecurso, { foreignKey: 'idrecurso' });
+Usuario.hasMany(Subrecurso, { foreignKey: 'idusuario' });
 
 const app = express();
 app.use(express.json());
 
 // Rotas de API (protegidas)
-app.use('/mensagens', authMiddleware, mensagemRoutes);
+app.use('/recurso', authMiddleware, recursoRoutes);
 
 // Rotas de comentários
-app.use('/mensagens/:idmensagem/comentarios', authMiddleware, comentariosRoutes);
+app.use('/recurso/:idrecurso/subrecurso', authMiddleware, subrecursoRoutes);
 
 // Rotas públicas
 app.use('/usuarios', usuarioRoutes);
@@ -39,7 +42,7 @@ app.use('/auth', authRoutes);
 // app.get('/', (req, res) => {
 //     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 // });
-// app.get('/mensagens/:idmensagem/comentarios', (req, res) => {
+// app.get('/Recurso/:idmensagem/comentarios', (req, res) => {
 //     res.sendFile(path.join(__dirname, 'public', 'comentarios.html'));
 // });
 
