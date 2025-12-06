@@ -7,16 +7,15 @@ const router = express.Router();
 // Criar usuário
 router.post('/', async (req, res) => {
     try {
-        const { nome, email, senha, perfil } = req.body;
+        const { nome, email, senha} = req.body;
         if (!nome || !email || !senha) {
             return res.status(422).json({ errors: { nome: ['Campo obrigatório.'], email: ['Campo obrigatório.'], senha: ['Campo obrigatório.'] } });
         }
-        const novoUsuario = await Usuario.create({ nome, email, senha, perfil });
+        const novoUsuario = await Usuario.create({ nome, email, senha});
         res.status(201).json({
             id: novoUsuario.id,
             nome: novoUsuario.nome,
             email: novoUsuario.email,
-            perfil: novoUsuario.perfil
         });
     } catch (err) {
         res.status(400).json({ error: err.message });

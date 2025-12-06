@@ -6,15 +6,17 @@ import authRoutes from './routes/auth.js';
 import subrecursoRoutes from './routes/subrecurso.js';
 import authMiddleware from './middlewares/authMiddleware.js';
 import aplicarAssociacoes from './models/associacoes.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import cors from 'cors';
 
 aplicarAssociacoes();
 
 const app = express();
+app.use(cors({
+    origin: '*', // Ou use '*' para qualquer origem
+    credentials: true, // Se estiver usando cookies/sessões
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Prefixo para as rotas da API
@@ -22,14 +24,6 @@ app.use('/api/recurso', authMiddleware, recursoRoutes);
 app.use('/api/subrecurso', authMiddleware, subrecursoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/auth', authRoutes);
-
-// Servir arquivos estáticos do frontend
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-// Redirecionar todas as rotas do frontend para o index.html
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
 
 const PORT = 5000;
 sequelize.sync()

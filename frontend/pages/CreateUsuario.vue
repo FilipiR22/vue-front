@@ -5,7 +5,7 @@
             <form @submit.prevent="submit">
                 <div class="mb-3">
                     <label class="form-label">Nome</label>
-                    <input v-model="name" type="text" class="form-control" required />
+                    <input v-model="nome" type="text" class="form-control" required />
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Email</label>
@@ -13,7 +13,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Senha</label>
-                    <input v-model="password" type="password" class="form-control" required />
+                    <input v-model="senha" type="password" class="form-control" required />
                 </div>
                 <button type="submit" class="btn btn-primary w-100">Criar Conta</button>
             </form>
@@ -24,26 +24,45 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import Usuario from '../services/usuario'
+import Usuario from '../services/user'
 
-const name = ref('')
+const nome = ref('')
 const email = ref('')
-const password = ref('')
+const senha = ref('')
 const router = useRouter()
 
 async function submit() {
     try {
-        // Simula criação de usuário (substitua pela chamada real à API)
-        console.log('Criando usuário:', { name: name.value, email: email.value, password: password.value })
-        Usuario.create({
-            name: name.value,
-            email: email.value,
-            password: password.value
+        console.log('Criando usuário:', { 
+            nome: nome.value, 
+            email: email.value, 
+            senha: senha.value  // CORRIGIDO
         })
+        
+        const dataUser = {
+            nome: nome.value,
+            email: email.value,
+            senha: senha.value  // AQUI ESTÁ O ERRO! Estava 'semha'
+        }
+        
+        await Usuario.create(dataUser)
         alert('Usuário criado com sucesso!')
         router.push('/login')
+        
     } catch (err) {
-        alert('Erro ao criar usuário')
+        console.error('Erro completo:', err)
+        console.error('Resposta do servidor:', err.response?.data)
+        
+        // Adicione isso para ver o que está sendo enviado:
+        console.log('Dados enviados:', dataUser) // Adicione esta linha
+        
+        if (err.response?.status === 422) {
+            alert('Dados inválidos. Verifique os campos.')
+        } else if (err.response?.status === 400) {
+            alert(`Erro: ${err.response.data?.error || 'Dados incorretos'}`)
+        } else {
+            alert('Erro ao criar usuário. Tente novamente.')
+        }
     }
 }
 </script>
