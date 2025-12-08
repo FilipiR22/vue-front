@@ -24,12 +24,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import Auth from '../services/auth' // Importar serviço
+import Auth from '../services/auth' 
 
 const email = ref('')
 const password = ref('')
 const router = useRouter()
-const isLoading = ref(false) // Para mostrar loading
+const isLoading = ref(false) 
 
 async function submit() {
     if (isLoading.value) return
@@ -39,26 +39,19 @@ async function submit() {
     try {
         const credentials = {
             email: email.value,
-            senha: password.value // Note: backend espera 'senha', não 'password'
+            senha: password.value 
         }
         
         const response = await Auth.login(credentials)
-        const { token, user } = response.data
+        const { access_token} = response.data
         
-        // Salvar token e dados do usuário
-        localStorage.setItem('token', token)
-        localStorage.setItem('user', JSON.stringify(user))
-        
-        // Configurar axios para usar o token (se tiver configurado)
-        // api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        
-        // Redirecionar
+        localStorage.setItem('token', access_token)
+
         router.push('/resources')
         
     } catch (err) {
         console.error('Erro no login:', err)
         
-        // Mensagens de erro mais específicas
         if (err.response?.status === 401) {
             alert('Email ou senha incorretos.')
         } else if (err.response?.status === 400) {
