@@ -61,11 +61,8 @@
                     <!-- Botões de ação -->
                     <div class="col-md-2">
                         <div class="d-flex gap-2">
-                            <button @click="limparFiltros" class="btn btn-outline-secondary">
+                            <button @click="limparFiltros" class="btn btn-outline-secondary w-100">
                                 Limpar
-                            </button>
-                            <button @click="openForm(null)" class="btn btn-primary">
-                                + Novo
                             </button>
                         </div>
                     </div>
@@ -159,7 +156,7 @@
                             <div class="col-md-2">
                                 <div class="text-muted small">
                                     <i class="bi bi-calendar me-1"></i>
-                                    {{ formatDate(recurso.data_criacao) }}
+                                    {{ formatDate(recurso.data) }}
                                 </div>
                                 <div class="text-muted small mt-1">
                                     <i class="bi bi-list-task me-1"></i>
@@ -175,7 +172,7 @@
                                     class="btn btn-sm btn-outline-info me-1 mb-1"
                                     title="Ver detalhes"
                                 >
-                                    <i class="bi bi-eye"></i>
+                                    <i class="fa-solid fa-eye"></i>
                                 </router-link>
                                 
                                 <!-- Botão para ver subrecursos (alternar) -->
@@ -184,17 +181,17 @@
                                     class="btn btn-sm btn-outline-secondary me-1 mb-1"
                                     :title="openedId === recurso.id ? 'Ocultar subitens' : 'Mostrar subitens'"
                                 >
-                                    <i class="bi" :class="openedId === recurso.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                                    <i class="fa-regular fa-solid" :class="openedId === recurso.id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
                                 </button>
                                 
-                                <!-- Botão editar -->
-                                <button 
-                                    @click="openForm(recurso)" 
+                                <!-- Botão editar (redireciona para página de edição) -->
+                                <router-link 
+                                    :to="{ name: 'ResourceEdit', params: { id: recurso.id } }"
                                     class="btn btn-sm btn-outline-warning me-1 mb-1"
                                     title="Editar"
                                 >
-                                    <i class="bi bi-pencil"></i>
-                                </button>
+                                    <i class="fa-regular fa-pen-to-square"></i>
+                                </router-link>
                                 
                                 <!-- Botão excluir -->
                                 <button 
@@ -202,7 +199,7 @@
                                     class="btn btn-sm btn-outline-danger mb-1"
                                     title="Excluir"
                                 >
-                                    <i class="bi bi-trash"></i>
+                                    <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
                         </div>
@@ -240,27 +237,6 @@
             </template>
         </div>
 
-        <!-- Modal de formulário para recurso -->
-        <div v-if="showForm" class="modal d-block" style="background: rgba(0, 0, 0, 0.5);">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            {{ editing ? 'Editar Recurso' : 'Novo Recurso' }}
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" @click="closeForm"></button>
-                    </div>
-                    <div class="modal-body">
-                        <ResourceForm 
-                            :model="editing" 
-                            @save="onSaved" 
-                            @cancel="closeForm" 
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Modal de formulário para subrecurso -->
         <div v-if="showSubrecursoForm" class="modal d-block" style="background: rgba(0, 0, 0, 0.5);">
             <div class="modal-dialog modal-dialog-centered modal-md">
@@ -289,7 +265,6 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import recursoService from '../services/resourceService'
-import ResourceForm from './ResourceForm.vue'
 import SubResourceList from './SubResourceList.vue'
 import SubResourceForm from './SubResourceForm.vue'
 
@@ -302,9 +277,7 @@ const loading = ref(false)
 const error = ref('')
 const openedId = ref(null)
 
-// Formulários
-const showForm = ref(false)
-const editing = ref(null)
+// Formulários (apenas subrecurso agora)
 const showSubrecursoForm = ref(false)
 const subrecursoEditando = ref(null)
 const recursoIdParaSubrecurso = ref(null)
@@ -416,26 +389,6 @@ const limparFiltros = () => {
     fetchList()
 }
 
-const openForm = (model) => {
-    editing.value = model ? { ...model } : null
-    showForm.value = true
-}
-
-const closeForm = () => {
-    showForm.value = false
-    editing.value = null
-}
-
-const onSaved = async (savedData) => {
-    closeForm()
-    await fetchList() // Recarregar lista
-    
-    notify({
-        message: editing.value ? 'Recurso atualizado com sucesso!' : 'Recurso criado com sucesso!',
-        type: 'success'
-    })
-}
-
 const confirmDelete = async (recurso) => {
     if (!confirm(`Tem certeza que deseja excluir o recurso "${recurso.titulo}"?\nEsta ação não pode ser desfeita.`)) {
         return
@@ -540,19 +493,6 @@ watch(filters, () => {
     margin-top: 1rem;
 }
 
-.modal {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1050;
-    backdrop-filter: blur(2px);
-}
-
 /* Estilos para badges */
 .badge {
     font-size: 0.75em;
@@ -573,6 +513,11 @@ watch(filters, () => {
     padding: 4px 8px;
     border-radius: 4px;
     border-left: 3px solid #dee2e6;
+}
+
+/* Estilo para o botão de novo recurso */
+.btn-primary {
+    text-decoration: none;
 }
 
 /* Responsividade */

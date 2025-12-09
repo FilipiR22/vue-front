@@ -1,7 +1,6 @@
 <template>
     <DefaultLayout>
         <div class="card p-4">
-            <h3>Novo Recurso</h3>
             <ResourceForm @save="goBack" @cancel="goBack" />
         </div>
     </DefaultLayout>

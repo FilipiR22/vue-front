@@ -3,7 +3,7 @@
         <!-- Navbar -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
             <div class="container">
-                <router-link to="/home" class="navbar-brand">
+                <router-link to="/resources" class="navbar-brand">
                     <i class="bi bi-stack me-2"></i>
                     Meu Projeto Full-Stack
                 </router-link>
@@ -32,27 +32,10 @@
                     </ul>
 
                     <div class="navbar-nav">
-                        <div class="nav-item dropdown">
-                            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle me-1"></i>
-                                {{ usuario?.nome || 'Usuário' }}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <router-link to="/profile" class="dropdown-item">
-                                        <i class="bi bi-person me-2"></i> Perfil
-                                    </router-link>
-                                </li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li>
-                                    <button @click="logout" class="dropdown-item text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i> Sair
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
+                        <button @click="logout" class="btn btn-danger px-3 py-2">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i>
+                            <span>Sair</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -74,7 +57,7 @@
             <div class="container text-center text-muted">
                 <small>
                     Projeto Full-Stack &copy; {{ new Date().getFullYear() }} -
-                    Vue.js 3 + Backend + JWT
+                    Vue.js 3 + Express.js + JWT + SQLite
                 </small>
             </div>
         </footer>
