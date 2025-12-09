@@ -1,3 +1,4 @@
+// models/Subrecurso.js (versão atualizada)
 import { DataTypes } from 'sequelize';
 import sequelize from '../database.js';
 
@@ -23,12 +24,27 @@ const Subrecurso = sequelize.define('Subrecurso', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    data_criacao: {
+    status: {
+        type: DataTypes.ENUM('ativo', 'em_andamentoinativo'),
+        defaultValue: 'ativo',
+        allowNull: false
+    },
+    data: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
+    },
+    categoria: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: 'geral'
+    },
+    auroe: {
+        type: DataTypes.STRING(100),
+        allowNull: true
     }
 }, {
-    timestamps: false
+    timestamps: false,
+    tableName: 'subrecursos'
 });
 
 export default Subrecurso;

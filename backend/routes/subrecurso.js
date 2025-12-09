@@ -1,155 +1,253 @@
+// routes/subrecursoRoutes.js
 import express from 'express';
 import Subrecurso from '../models/subrecurso.js';
 import Recurso from '../models/recurso.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
-// Criar subrecurso
+// ==================== ROTAS DE SUBRECURSO (CRUD Completo) ====================
+
+// 1. CRIAR SUBRECURSO (POST /subrecursos) - Protegido
 router.post('/', authMiddleware, async (req, res) => {
-    const { idrecurso, titulo, descricao, status } = req.body;
+    const { idrecurso, titulo, conteudo, status = 'pendente', categoria, autor } = req.body;
 
-    if (!idrecurso || !titulo || !titulo.trim()) {
-        return res.status(422).json({
-            errors: {
-                idrecurso: ['Campo obrigatório.'],
-                titulo: ['Campo obrigatório.']
-            }
-        });
+    // Validação dos campos obrigatórios
+    const errors = {};
+    if (!idrecurso) errors.idrecurso = ['Campo obrigatório (relacionamento)'];
+    if (!titulo || !titulo.trim()) errors.titulo = ['Campo obrigatório'];
+    if (!conteudo || !conteudo.trim()) errors.conteudo = ['Campo obrigatório'];
+
+    if (Object.keys(errors).length > 0) {
+        return res.status(422).json({ errors });
     }
 
     try {
+        // Verificar se o recurso pai existe
         const recurso = await Recurso.findByPk(idrecurso);
-        if (!recurso) return res.status(404).json({ error: 'Recurso não encontrado' });
-
-        if (req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
-            return res.status(403).json({ error: 'Você não tem permissão para isso' });
+        if (!recurso) {
+            return res.status(404).json({ error: 'Recurso pai não encontrado' });
         }
 
-        const novo = await Subrecurso.create({
-            idrecurso,
-            titulo,
-            descricao,
-            status,
-            data_criacao: new Date()
+        // Verificar permissões (dono do recurso ou ADMIN)
+        if (req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
+            return res.status(403).json({ error: 'Sem permissão para criar subrecursos neste recurso' });
+        }
+
+        // Criar subrecurso
+        const novoSubrecurso = await Subrecurso.create({
+            idrecurso, // RELACIONAMENTO OBRIGATÓRIO (RF #2)
+            titulo: titulo.trim(),
+            conteudo: conteudo.trim(),
+            idusuario: req.usuario.id,
+            status: status || 'pendente',
+            categoria: categoria || 'geral',
+            autor: autor || null,
+            data: new Date()
         });
 
-        res.status(201).json(novo);
+        res.status(201).json(novoSubrecurso);
     } catch (err) {
-        res.status(400).json({ error: 'Erro ao criar subrecurso', detalhes: err.message });
+        console.error('Erro ao criar subrecurso:', err);
+        res.status(400).json({
+            error: 'Erro ao criar subrecurso',
+            details: err.message
+        });
     }
 });
 
-// Listar subrecursos de um recurso
-router.get('/recurso/:idrecurso', authMiddleware, async (req, res) => {
+// 2. LISTAR SUBRECURSOS COM FILTROS (GET /subrecursos) - Protegido
+router.get('/', authMiddleware, async (req, res) => {
     try {
-        const recurso = await Recurso.findByPk(req.params.idrecurso);
-        if (!recurso) return res.status(404).json({ error: 'Recurso não encontrado' });
+        const { idrecurso, status, categoria, autor, data_inicio, data_fim, search } = req.query;
+        const where = {};
 
-        if (req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
-            return res.status(403).json({ error: 'Você não tem permissão para isso' });
+        // FILTRO OBRIGATÓRIO: Por recurso pai (RF #2)
+        if (idrecurso) {
+            where.idrecurso = idrecurso;
+            
+            // Verificar permissões para o recurso pai
+            const recurso = await Recurso.findByPk(idrecurso);
+            if (recurso && req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
+                return res.status(403).json({ error: 'Sem permissão para acessar subrecursos deste recurso' });
+            }
+        } else {
+            // Se não especificar idrecurso, listar apenas subrecursos de recursos do usuário
+            const recursosDoUsuario = await Recurso.findAll({
+                where: { idusuario: req.usuario.id },
+                attributes: ['id']
+            });
+            const idsRecursos = recursosDoUsuario.map(r => r.id);
+            where.idrecurso = { [Op.in]: idsRecursos };
         }
 
-        const lista = await Subrecurso.findAll({
-            where: { idrecurso: req.params.idrecurso }
+        // FILTRO 1: Status (RF #5 - 1 ponto)
+        if (status && status !== 'todos') {
+            where.status = status;
+        }
+
+        // FILTRO 2: Categoria (RF #5 - 1 ponto)
+        if (categoria && categoria !== 'todas') {
+            where.categoria = categoria;
+        }
+
+        // FILTRO 3: Responsável (RF #5 - 1 ponto)
+        if (autor && autor.trim()) {
+            where.autor = { [Op.iLike]: `%${autor.trim()}%` };
+        }
+
+        // FILTRO 4: Intervalo de datas (RF #5 - 1 ponto)
+        if (data_inicio || data_fim) {
+            where.data = {};
+            if (data_inicio) {
+                where.data[Op.gte] = new Date(data_inicio);
+            }
+            if (data_fim) {
+                where.data[Op.lte] = new Date(data_fim);
+            }
+        }
+
+        // FILTRO 5: Busca textual (titulo/conteudo) (RF #5 - 1 ponto extra)
+        if (search && search.trim()) {
+            where[Op.or] = [
+                { titulo: { [Op.iLike]: `%${search.trim()}%` } },
+                { conteudo: { [Op.iLike]: `%${search.trim()}%` } }
+            ];
+        }
+
+        const subrecursos = await Subrecurso.findAll({
+            where,
+            order: [['data', 'DESC']],
+            include: [{
+                model: Recurso,
+                as: 'recurso',
+                attributes: ['id', 'titulo']
+            }]
         });
 
-        res.status(200).json(lista);
+        res.status(200).json(subrecursos);
     } catch (err) {
-        res.status(500).json({ error: 'Erro ao buscar subrecursos' });
+        console.error('Erro ao buscar subrecursos:', err);
+        res.status(500).json({
+            error: 'Erro ao buscar subrecursos',
+            details: err.message
+        });
     }
 });
 
-// Obter subrecurso específico
+// 3. BUSCAR SUBRECURSO ESPECÍFICO (GET /subrecursos/:id) - Protegido
 router.get('/:id', authMiddleware, async (req, res) => {
     try {
-        const sub = await Subrecurso.findByPk(req.params.id);
-        if (!sub) return res.status(404).json({ error: 'Subrecurso não encontrado' });
+        const subrecurso = await Subrecurso.findOne({
+            where: { id: req.params.id },
+            include: [{
+                model: Recurso,
+                as: 'recurso',
+                attributes: ['id', 'titulo', 'idusuario']
+            }]
+        });
 
-        const recurso = await Recurso.findByPk(sub.idrecurso);
-
-        if (req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
-            return res.status(403).json({ error: 'Você não tem permissão para isso' });
+        if (!subrecurso) {
+            return res.status(404).json({ error: 'Subrecurso não encontrado' });
         }
 
-        res.status(200).json(sub);
+        // Verificar permissões (dono do recurso pai ou ADMIN)
+        if (req.usuario.perfil !== 'ADMIN' && subrecurso.recurso.idusuario !== req.usuario.id) {
+            return res.status(403).json({ error: 'Sem permissão para acessar este subrecurso' });
+        }
+
+        res.status(200).json(subrecurso);
     } catch (err) {
-        res.status(500).json({ error: 'Erro ao buscar subrecurso' });
+        console.error('Erro ao buscar subrecurso:', err);
+        res.status(500).json({
+            error: 'Erro ao buscar subrecurso',
+            details: err.message
+        });
     }
 });
 
-// Atualizar subrecurso (PUT)
+// 4. ATUALIZAR SUBRECURSO (PUT /subrecursos/:id) - Protegido
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        const sub = await Subrecurso.findByPk(req.params.id);
-        if (!sub) return res.status(404).json({ error: 'Subrecurso não encontrado' });
+        const subrecurso = await Subrecurso.findOne({
+            where: { id: req.params.id },
+            include: [{
+                model: Recurso,
+                as: 'recurso',
+                attributes: ['idusuario']
+            }]
+        });
 
-        const recurso = await Recurso.findByPk(sub.idrecurso);
-        if (req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
-            return res.status(403).json({ error: 'Você não tem permissão para isso' });
+        if (!subrecurso) {
+            return res.status(404).json({ error: 'Subrecurso não encontrado' });
         }
 
-        const { titulo, descricao, status } = req.body;
-
-        if (!titulo || !titulo.trim()) {
-            return res.status(422).json({ errors: { titulo: ['Campo obrigatório.'] } });
+        // Verificar permissões (dono do recurso pai ou ADMIN)
+        if (req.usuario.perfil !== 'ADMIN' && subrecurso.recurso.idusuario !== req.usuario.id) {
+            return res.status(403).json({ error: 'Sem permissão para editar este subrecurso' });
         }
 
-        sub.titulo = titulo;
-        sub.descricao = descricao;
-        sub.status = status;
+        const { titulo, conteudo, status, categoria, autor } = req.body;
 
-        await sub.save();
+        // Validação
+        const errors = {};
+        if (!titulo || !titulo.trim()) errors.titulo = ['Campo obrigatório'];
+        if (!conteudo || !conteudo.trim()) errors.conteudo = ['Campo obrigatório'];
 
-        res.status(200).json(sub);
+        if (Object.keys(errors).length > 0) {
+            return res.status(422).json({ errors });
+        }
+
+        // Atualizar campos
+        subrecurso.titulo = titulo.trim();
+        subrecurso.conteudo = conteudo.trim();
+        if (status !== undefined) subrecurso.status = status;
+        if (categoria !== undefined) subrecurso.categoria = categoria;
+        if (autor !== undefined) subrecurso.autor = autor;
+
+        await subrecurso.save();
+
+        res.status(200).json(subrecurso);
     } catch (err) {
-        res.status(500).json({ error: 'Erro ao atualizar subrecurso' });
+        console.error('Erro ao atualizar subrecurso:', err);
+        res.status(500).json({
+            error: 'Erro ao atualizar subrecurso',
+            details: err.message
+        });
     }
 });
 
-// Atualizar subrecurso (PATCH)
-router.patch('/:id', authMiddleware, async (req, res) => {
-    try {
-        const sub = await Subrecurso.findByPk(req.params.id);
-        if (!sub) return res.status(404).json({ error: 'Subrecurso não encontrado' });
-
-        const recurso = await Recurso.findByPk(sub.idrecurso);
-        if (req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
-            return res.status(403).json({ error: 'Você não tem permissão para isso' });
-        }
-
-        if ('titulo' in req.body && (!req.body.titulo || !req.body.titulo.trim())) {
-            return res.status(422).json({ errors: { titulo: ['Campo obrigatório.'] } });
-        }
-
-        if (req.body.titulo !== undefined) sub.titulo = req.body.titulo;
-        if (req.body.descricao !== undefined) sub.descricao = req.body.descricao;
-        if (req.body.status !== undefined) sub.status = req.body.status;
-
-        await sub.save();
-
-        res.status(200).json(sub);
-    } catch (err) {
-        res.status(500).json({ error: 'Erro ao atualizar subrecurso' });
-    }
-});
-
-// Deletar subrecurso
+// 5. DELETAR SUBRECURSO (DELETE /subrecursos/:id) - Protegido
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
-        const sub = await Subrecurso.findByPk(req.params.id);
-        if (!sub) return res.status(404).json({ error: 'Subrecurso não encontrado' });
+        const subrecurso = await Subrecurso.findOne({
+            where: { id: req.params.id },
+            include: [{
+                model: Recurso,
+                as: 'recurso',
+                attributes: ['idusuario']
+            }]
+        });
 
-        const recurso = await Recurso.findByPk(sub.idrecurso);
-        if (req.usuario.perfil !== 'ADMIN' && recurso.idusuario !== req.usuario.id) {
-            return res.status(403).json({ error: 'Você não tem permissão para isso' });
+        if (!subrecurso) {
+            return res.status(404).json({ error: 'Subrecurso não encontrado' });
         }
 
-        await sub.destroy();
+        // Verificar permissões (dono do recurso pai ou ADMIN)
+        if (req.usuario.perfil !== 'ADMIN' && subrecurso.recurso.idusuario !== req.usuario.id) {
+            return res.status(403).json({ error: 'Sem permissão para excluir este subrecurso' });
+        }
+
+        await subrecurso.destroy();
 
         res.status(204).send();
     } catch (err) {
-        res.status(500).json({ error: 'Erro ao deletar subrecurso' });
+        console.error('Erro ao deletar subrecurso:', err);
+        res.status(500).json({
+            error: 'Erro ao deletar subrecurso',
+            details: err.message
+        });
     }
 });
 

@@ -1,96 +1,283 @@
 <template>
     <div>
+        <!-- Cabeçalho com filtros -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <input v-model.lazy="filters.q" placeholder="🔍 Pesquisar por título..." class="form-control" />
-                    </div>
+                    <!-- Filtro por título/conteúdo/autor -->
                     <div class="col-md-3">
-                        <input v-model.lazy="filters.author" placeholder="👤 Filtrar por autor" class="form-control" />
+                        <input 
+                            v-model.lazy="filters.search" 
+                            placeholder="🔍 Pesquisar (título/conteúdo/autor)..." 
+                            class="form-control" 
+                        />
                     </div>
+                    
+                    <!-- Filtro por status -->
                     <div class="col-md-2">
                         <select v-model="filters.status" class="form-select">
-                            <option value="todos">Todos</option>
+                            <option value="">Todos status</option>
                             <option value="ativo">Ativo</option>
                             <option value="inativo">Inativo</option>
+                            <option value="rascunho">Rascunho</option>
                         </select>
                     </div>
+                    
+                    <!-- Filtro por categoria -->
+                    <div class="col-md-2">
+                        <select v-model="filters.categoria" class="form-select">
+                            <option value="">Todas categorias</option>
+                            <option value="tecnologia">Tecnologia</option>
+                            <option value="educacao">Educação</option>
+                            <option value="saude">Saúde</option>
+                            <option value="negocios">Negócios</option>
+                            <option value="entretenimento">Entretenimento</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro por data -->
                     <div class="col-md-3">
-                        <button @click="openForm(null)" class="btn btn-primary w-100">+ Novo</button>
+                        <div class="row g-2">
+                            <div class="col">
+                                <input 
+                                    type="date" 
+                                    v-model="filters.data_inicio" 
+                                    class="form-control" 
+                                    placeholder="Data início"
+                                />
+                            </div>
+                            <div class="col">
+                                <input 
+                                    type="date" 
+                                    v-model="filters.data_fim" 
+                                    class="form-control" 
+                                    placeholder="Data fim"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões de ação -->
+                    <div class="col-md-2">
+                        <div class="d-flex gap-2">
+                            <button @click="limparFiltros" class="btn btn-outline-secondary">
+                                Limpar
+                            </button>
+                            <button @click="openForm(null)" class="btn btn-primary">
+                                + Novo
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Loading -->
+        <!-- Contador de resultados -->
+        <div class="mb-3 text-muted small">
+            <span v-if="recursos.length > 0">
+                Mostrando {{ recursos.length }} recurso{{ recursos.length !== 1 ? 's' : '' }}
+                <span v-if="temFiltrosAtivos"> (filtrados)</span>
+            </span>
+        </div>
+
+        <!-- Estado de carregamento -->
         <div v-if="loading" class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Carregando...</span>
             </div>
+            <p class="mt-2 text-muted">Carregando recursos...</p>
+        </div>
+
+        <!-- Estado de erro -->
+        <div v-else-if="error" class="alert alert-danger">
+            <h5>❌ Erro ao carregar recursos</h5>
+            <p>{{ error }}</p>
+            <button @click="fetchList" class="btn btn-sm btn-outline-danger">
+                Tentar novamente
+            </button>
+        </div>
+
+        <!-- Lista vazia -->
+        <div v-else-if="recursos.length === 0" class="alert alert-info">
+            <div class="text-center py-4">
+                <i class="bi bi-inbox display-4 text-muted mb-3"></i>
+                <h5>📭 Nenhum recurso encontrado</h5>
+                <p v-if="temFiltrosAtivos">
+                    Nenhum resultado para os filtros aplicados.
+                    <a href="#" @click.prevent="limparFiltros" class="alert-link">
+                        Limpar filtros
+                    </a>
+                </p>
+                <p v-else>
+                    Você ainda não possui recursos. Crie o primeiro clicando no botão "+ Novo"
+                </p>
+            </div>
         </div>
 
         <!-- Lista de recursos -->
-        <div v-else-if="filteredResources.length" class="space-y-3">
-            <template v-for="r in filteredResources" :key="r.id">
+        <div v-else class="space-y-3">
+            <template v-for="recurso in recursos" :key="recurso.id">
                 <div class="card shadow-sm resource-card">
                     <div class="card-body">
                         <div class="row align-items-center">
-                            <div class="col-md-2">
-                                <h6 class="card-title mb-0 text-truncate" :title="r.titulo">{{ r.titulo }}</h6>
+                            <!-- Título e Autor -->
+                            <div class="col-md-3">
+                                <h6 class="card-title mb-1" :title="recurso.titulo">
+                                    {{ truncateText(recurso.titulo, 30) }}
+                                </h6>
+                                <div class="text-muted small">
+                                    <i class="bi bi-person me-1"></i>
+                                    {{ recurso.autor || 'Autor não informado' }}
+                                </div>
                             </div>
+                            
+                            <!-- Categoria e Status -->
                             <div class="col-md-2">
-                                <small class="text-muted">{{ r.autor }}</small>
-                            </div>
-                            <div class="col-md-2">
-                                <small class="text-muted">{{ formatDate(r.data) }}</small>
-                            </div>
-                            <div class="col-md-2">
-                                <span :class="['badge', r.status === 'ativo' ? 'bg-success' : 'bg-danger']">
-                                    {{ r.status }}
+                                <div class="mb-1">
+                                    <span v-if="recurso.categoria" class="badge categoria-badge">
+                                        {{ formatCategoria(recurso.categoria) }}
+                                    </span>
+                                    <span v-else class="badge bg-secondary">Sem categoria</span>
+                                </div>
+                                <span :class="['badge', badgeClass(recurso.status)]">
+                                    {{ formatStatus(recurso.status) }}
                                 </span>
                             </div>
-                            <div class="col-md-4 text-end">
-                                <button @click="toggleSubs(r.id)" class="btn btn-sm btn-outline-info me-2">
-                                    {{ openedId === r.id ? '▼ Ocultar' : '▶ Subitens' }}
+                            
+                            <!-- Conteúdo (prévia) -->
+                            <div class="col-md-3">
+                                <div class="conteudo-preview">
+                                    {{ truncateText(recurso.conteudo, 50) }}
+                                </div>
+                                <small class="text-muted">
+                                    {{ recurso.conteudo?.length || 0 }} caracteres
+                                </small>
+                            </div>
+                            
+                            <!-- Data e Subrecursos -->
+                            <div class="col-md-2">
+                                <div class="text-muted small">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    {{ formatDate(recurso.data_criacao) }}
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    <i class="bi bi-list-task me-1"></i>
+                                    {{ recurso.subrecursos?.length || 0 }} subitem(s)
+                                </div>
+                            </div>
+                            
+                            <!-- Ações -->
+                            <div class="col-md-2 text-end">
+                                <!-- Botão para ver detalhes -->
+                                <router-link 
+                                    :to="{ name: 'ResourceDetails', params: { id: recurso.id } }"
+                                    class="btn btn-sm btn-outline-info me-1 mb-1"
+                                    title="Ver detalhes"
+                                >
+                                    <i class="bi bi-eye"></i>
+                                </router-link>
+                                
+                                <!-- Botão para ver subrecursos (alternar) -->
+                                <button 
+                                    @click="toggleSubrecursos(recurso.id)" 
+                                    class="btn btn-sm btn-outline-secondary me-1 mb-1"
+                                    :title="openedId === recurso.id ? 'Ocultar subitens' : 'Mostrar subitens'"
+                                >
+                                    <i class="bi" :class="openedId === recurso.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
                                 </button>
-                                <button @click="openForm(r)" class="btn btn-sm btn-outline-warning me-2">
-                                    ✏️ Editar
+                                
+                                <!-- Botão editar -->
+                                <button 
+                                    @click="openForm(recurso)" 
+                                    class="btn btn-sm btn-outline-warning me-1 mb-1"
+                                    title="Editar"
+                                >
+                                    <i class="bi bi-pencil"></i>
                                 </button>
-                                <button @click="confirmDelete(r.id)" class="btn btn-sm btn-outline-danger">
-                                    🗑️ Excluir
+                                
+                                <!-- Botão excluir -->
+                                <button 
+                                    @click="confirmDelete(recurso)" 
+                                    class="btn btn-sm btn-outline-danger mb-1"
+                                    title="Excluir"
+                                >
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="openedId === r.id" class="card card-body bg-light ms-4 mb-3">
-                    <SubResourceList :resourceId="r.id" @notify="notify" />
+                <!-- Lista de subrecursos (expandível) -->
+                <div v-if="openedId === recurso.id" class="card card-body bg-light ms-4 mb-3 border-start border-primary">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">
+                            <i class="bi bi-list-task me-2"></i>
+                            Subrecursos de "{{ recurso.titulo }}"
+                        </h6>
+                        <div>
+                            <button 
+                                @click="abrirFormSubrecurso(recurso.id)" 
+                                class="btn btn-sm btn-primary"
+                            >
+                                <i class="bi bi-plus"></i> Novo Subrecurso
+                            </button>
+                            <button 
+                                @click="toggleSubrecursos(recurso.id)" 
+                                class="btn btn-sm btn-outline-secondary ms-2"
+                            >
+                                <i class="bi bi-x-lg"></i> Fechar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <SubResourceList 
+                        :resource-id="recurso.id" 
+                        @notify="notify"
+                    />
                 </div>
             </template>
         </div>
 
-        <!-- Empty state -->
-        <div v-else class="alert alert-info text-center">
-            <h5>📭 Nenhum recurso encontrado</h5>
-            <p v-if="filters.q || filters.author || filters.status !== 'todos'">
-                Tente ajustar os filtros ou
-                <a href="#" @click.prevent="clearFilters" class="alert-link">limpar filtros</a>
-            </p>
-            <p v-else>Crie o primeiro clicando no botão "+ Novo"</p>
-        </div>
-
-        <!-- Modal de formulário -->
+        <!-- Modal de formulário para recurso -->
         <div v-if="showForm" class="modal d-block" style="background: rgba(0, 0, 0, 0.5);">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">{{ editing ? 'Editar Recurso' : 'Novo Recurso' }}</h5>
+                        <h5 class="modal-title">
+                            {{ editing ? 'Editar Recurso' : 'Novo Recurso' }}
+                        </h5>
                         <button type="button" class="btn-close btn-close-white" @click="closeForm"></button>
                     </div>
                     <div class="modal-body">
-                        <ResourceForm :model="editing" @save="onSaved" @cancel="closeForm" />
+                        <ResourceForm 
+                            :model="editing" 
+                            @save="onSaved" 
+                            @cancel="closeForm" 
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de formulário para subrecurso -->
+        <div v-if="showSubrecursoForm" class="modal d-block" style="background: rgba(0, 0, 0, 0.5);">
+            <div class="modal-dialog modal-dialog-centered modal-md">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title">
+                            {{ subrecursoEditando ? 'Editar Subrecurso' : 'Novo Subrecurso' }}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @click="fecharFormSubrecurso"></button>
+                    </div>
+                    <div class="modal-body">
+                        <SubResourceForm
+                            :model="subrecursoEditando"
+                            :recurso-id="recursoIdParaSubrecurso"
+                            @save="salvarSubrecurso"
+                            @cancel="fecharFormSubrecurso"
+                        />
                     </div>
                 </div>
             </div>
@@ -100,193 +287,256 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import resourceService from '../services/resourceService'
+import { useRouter } from 'vue-router'
+import recursoService from '../services/resourceService'
 import ResourceForm from './ResourceForm.vue'
 import SubResourceList from './SubResourceList.vue'
+import SubResourceForm from './SubResourceForm.vue'
 
 const emit = defineEmits(['notify'])
+const router = useRouter()
 
-const allResources = ref([])
+// Dados
+const recursos = ref([])
 const loading = ref(false)
+const error = ref('')
+const openedId = ref(null)
+
+// Formulários
 const showForm = ref(false)
 const editing = ref(null)
-const openedId = ref(null)
+const showSubrecursoForm = ref(false)
+const subrecursoEditando = ref(null)
+const recursoIdParaSubrecurso = ref(null)
 
 // Filtros
 const filters = reactive({
-    q: '',
-    author: '',
-    status: 'todos'
+    search: '',
+    status: '',
+    categoria: '',
+    data_inicio: '',
+    data_fim: ''
 })
 
-// Computed com memoização melhor
-const filteredResources = computed(() => {
-    const list = Array.isArray(allResources.value) ? allResources.value : []
-
-    if (!filters.q && !filters.author && filters.status === 'todos') {
-        return list
-    }
-
-    return list.filter(item => {
-        // Título
-        if (filters.q) {
-            const titulo = String(item.titulo || '').toLowerCase()
-            if (!titulo.includes(filters.q.toLowerCase())) return false
-        }
-
-        // Autor
-        if (filters.author) {
-            const autor = String(item.autor || '').toLowerCase()
-            if (!autor.includes(filters.author.toLowerCase())) return false
-        }
-
-        // Status
-        if (filters.status !== 'todos') {
-            if (String(item.status) !== String(filters.status)) return false
-        }
-
-        return true
-    })
+// Computed
+const temFiltrosAtivos = computed(() => {
+    return Object.values(filters).some(val => val !== '' && val !== null)
 })
 
-function formatDate(date) {
-    if (!date) return ''
-    return new Date(date).toLocaleDateString('pt-BR')
+// Métodos
+const formatDate = (date) => {
+    if (!date) return 'Data não informada'
+    const dataObj = new Date(date)
+    return dataObj.toLocaleDateString('pt-BR')
 }
 
-async function fetchList() {
+const formatStatus = (status) => {
+    const map = {
+        'ativo': 'Ativo',
+        'inativo': 'Inativo',
+        'rascunho': 'Rascunho'
+    }
+    return map[status] || status
+}
+
+const formatCategoria = (categoria) => {
+    const map = {
+        'tecnologia': 'Tecnologia',
+        'educacao': 'Educação',
+        'saude': 'Saúde',
+        'negocios': 'Negócios',
+        'entretenimento': 'Entretenimento',
+        'outros': 'Outros'
+    }
+    return map[categoria] || categoria
+}
+
+const badgeClass = (status) => {
+    const classes = {
+        'ativo': 'bg-success',
+        'inativo': 'bg-danger',
+        'rascunho': 'bg-warning text-dark'
+    }
+    return classes[status] || 'bg-secondary'
+}
+
+const truncateText = (text, maxLength) => {
+    if (!text) return ''
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
+}
+
+// Buscar recursos da API
+const fetchList = async () => {
     loading.value = true
+    error.value = ''
+    
     try {
-        // Envia os filtros como params para a API (filtragem no servidor)
+        // Construir params para API
         const params = {}
-        if (filters.q) params.titulo_like = filters.q
-        if (filters.author) params.autor_like = filters.author
-        if (filters.status !== 'todos') params.status = filters.status
-
-        const response = await resourceService.list(params)
-
-        // DEBUG: Veja a estrutura da resposta
-        console.log('Resposta da API:', response)
-
-        // Ajuste conforme a estrutura real da resposta
-        // Se a resposta for direto um array:
+        
+        if (filters.search) params.search = filters.search
+        if (filters.status) params.status = filters.status
+        if (filters.categoria) params.categoria = filters.categoria
+        if (filters.data_inicio) params.data_inicio = filters.data_inicio
+        if (filters.data_fim) params.data_fim = filters.data_fim
+        
+        const response = await recursoService.list(params)
+        
+        // Ajustar conforme estrutura da sua API
         if (Array.isArray(response)) {
-            allResources.value = response
+            recursos.value = response
+        } else if (response?.data) {
+            recursos.value = Array.isArray(response.data) ? response.data : []
+        } else {
+            recursos.value = []
         }
-        // Se for { data: [...] } (Axios padrão):
-        else if (response.data && Array.isArray(response.data)) {
-            allResources.value = response.data
-        }
-        // Se for outra estrutura:
-        else if (response.data && typeof response.data === 'object') {
-            // Se for paginado: response.data.items ou response.data.results
-            allResources.value = response.data.items || response.data.results || []
-        }
-        else {
-            allResources.value = []
-        }
-
-        console.log('Dados carregados:', allResources.value.length, 'itens')
-
+        
     } catch (err) {
         console.error('Erro ao buscar recursos:', err)
+        error.value = err.response?.data?.message || err.message || 'Erro desconhecido'
+        
+        // Emitir notificação de erro
         notify({
-            message: 'Falha ao buscar recursos',
+            message: 'Falha ao carregar recursos',
             type: 'error',
-            details: err.message
+            details: error.value
         })
-        allResources.value = []
+        
+        recursos.value = []
     } finally {
         loading.value = false
     }
 }
 
-function clearFilters() {
-    filters.q = ''
-    filters.author = ''
-    filters.status = 'todos'
-    fetchList() // Recarrega os dados sem filtros
+const limparFiltros = () => {
+    Object.keys(filters).forEach(key => {
+        filters[key] = ''
+    })
+    fetchList()
 }
 
-function openForm(model) {
+const openForm = (model) => {
     editing.value = model ? { ...model } : null
     showForm.value = true
 }
 
-function closeForm() {
+const closeForm = () => {
     showForm.value = false
     editing.value = null
 }
 
-// No ResourceList.vue
-async function onSaved(savedData) {
-    try {
-        // Notificação já foi feita pelo form
-        closeForm()
-
-        // Recarrega a lista para garantir dados atualizados
-        await fetchList()
-
-    } catch (err) {
-        console.error('Erro após salvar:', err)
-    }
+const onSaved = async (savedData) => {
+    closeForm()
+    await fetchList() // Recarregar lista
+    
+    notify({
+        message: editing.value ? 'Recurso atualizado com sucesso!' : 'Recurso criado com sucesso!',
+        type: 'success'
+    })
 }
 
-
-async function confirmDelete(id) {
-    if (!confirm('Tem certeza que deseja excluir este recurso?')) return
-
+const confirmDelete = async (recurso) => {
+    if (!confirm(`Tem certeza que deseja excluir o recurso "${recurso.titulo}"?\nEsta ação não pode ser desfeita.`)) {
+        return
+    }
+    
     try {
-        await resourceService.remove(id)
-        notify({ message: 'Removido com sucesso', type: 'success' })
-
-        if (openedId.value === id) {
+        await recursoService.remove(recurso.id)
+        
+        // Remover da lista local
+        recursos.value = recursos.value.filter(r => r.id !== recurso.id)
+        
+        // Fechar se estiver aberto
+        if (openedId.value === recurso.id) {
             openedId.value = null
         }
-
-        await fetchList()
+        
+        notify({
+            message: 'Recurso excluído com sucesso!',
+            type: 'success'
+        })
+        
     } catch (err) {
         console.error('Erro ao excluir:', err)
+        
+        let mensagem = 'Erro ao excluir recurso'
+        if (err.response?.status === 403) {
+            mensagem = 'Você não tem permissão para excluir este recurso'
+        } else if (err.response?.status === 404) {
+            mensagem = 'Recurso não encontrado'
+        }
+        
         notify({
-            message: 'Erro ao remover recurso',
+            message: mensagem,
             type: 'error',
             details: err.message
         })
     }
 }
 
-function toggleSubs(id) {
+const toggleSubrecursos = (id) => {
     openedId.value = openedId.value === id ? null : id
 }
 
-function notify(payload) {
+const abrirFormSubrecurso = (recursoId) => {
+    recursoIdParaSubrecurso.value = recursoId
+    subrecursoEditando.value = null
+    showSubrecursoForm.value = true
+}
+
+const fecharFormSubrecurso = () => {
+    showSubrecursoForm.value = false
+    subrecursoEditando.value = null
+    recursoIdParaSubrecurso.value = null
+}
+
+const salvarSubrecurso = async () => {
+    fecharFormSubrecurso()
+    
+    // Recarregar lista de subrecursos se algum estiver aberto
+    if (openedId.value) {
+        // Você pode emitir um evento para o SubResourceList recarregar
+        // ou simplesmente recarregar todos os recursos
+        await fetchList()
+    }
+    
+    notify({
+        message: 'Subrecurso salvo com sucesso!',
+        type: 'success'
+    })
+}
+
+const notify = (payload) => {
     emit('notify', payload)
 }
 
-// Carregar dados ao montar
-onMounted(fetchList)
-
-// Observar mudanças nos filtros e recarregar da API
-watch(filters, () => {
-    // Usando debounce para evitar muitas chamadas
-    clearTimeout(window.filterTimeout)
-    window.filterTimeout = setTimeout(fetchList, 300)
+// Lifecycle
+onMounted(() => {
+    fetchList()
 })
+
+// Watch para filtros (com debounce)
+let filterTimeout
+watch(filters, () => {
+    clearTimeout(filterTimeout)
+    filterTimeout = setTimeout(fetchList, 500)
+}, { deep: true })
 </script>
 
 <style scoped>
 .resource-card {
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     border: none;
     border-left: 4px solid #007bff;
 }
 
 .resource-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
-.space-y-3>*+* {
+.space-y-3 > * + * {
     margin-top: 1rem;
 }
 
@@ -303,15 +553,56 @@ watch(filters, () => {
     backdrop-filter: blur(2px);
 }
 
-/* Responsividade */
-@media (max-width: 768px) {
-    .resource-card .card-body .row>div {
-        margin-bottom: 0.5rem;
-    }
+/* Estilos para badges */
+.badge {
+    font-size: 0.75em;
+    font-weight: 500;
+}
 
-    .resource-card .text-end {
+.categoria-badge {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Prévia do conteúdo */
+.conteudo-preview {
+    font-size: 0.9rem;
+    color: #495057;
+    line-height: 1.4;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border-left: 3px solid #dee2e6;
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+    .card-body .row > div {
+        margin-bottom: 0.75rem;
+    }
+    
+    .text-end {
         text-align: left !important;
         margin-top: 1rem;
+    }
+    
+    .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .resource-card .row {
+        flex-direction: column;
+    }
+    
+    .col-md-2, .col-md-3 {
+        width: 100%;
+    }
+    
+    .conteudo-preview {
+        display: none; /* Oculta prévia em telas muito pequenas */
     }
 }
 </style>

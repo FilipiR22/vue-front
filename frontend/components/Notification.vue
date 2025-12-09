@@ -17,10 +17,6 @@ function show({ message: m, type: t = 'info', timeout = 3000 }) {
 
 defineExpose({ show })
 
-fetch('http://localhost:3000/api/hello')
-    .then(r => r.json())
-    .then(console.log)
-
 </script>
 
 <style>
