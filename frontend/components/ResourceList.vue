@@ -175,14 +175,14 @@
                                     <i class="fa-solid fa-eye"></i>
                                 </router-link>
                                 
-                                <!-- Botão para ver subrecursos (alternar) -->
+                                <!-- Botão para ver subrecursos (alternar)
                                 <button 
                                     @click="toggleSubrecursos(recurso.id)" 
                                     class="btn btn-sm btn-outline-secondary me-1 mb-1"
                                     :title="openedId === recurso.id ? 'Ocultar subitens' : 'Mostrar subitens'"
                                 >
                                     <i class="fa-regular fa-solid" :class="openedId === recurso.id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                                </button>
+                                </button> -->
                                 
                                 <!-- Botão editar (redireciona para página de edição) -->
                                 <router-link 

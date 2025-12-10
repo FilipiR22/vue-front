@@ -1,12 +1,14 @@
 <template>
     <DefaultLayout>
+        <Notification ref="notification" />
+        
         <div class="resource-details-page">
             <!-- Cabeçalho com navegação -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
                         <router-link to="/resources">
-                            <i class="bi bi-arrow-left me-1"></i>
+                            <i class="fa fa-arrow-left me-1"></i>
                             Recursos
                         </router-link>
                     </li>
@@ -26,7 +28,7 @@
 
             <!-- Estado de erro -->
             <div v-else-if="error" class="alert alert-danger">
-                <h5><i class="bi bi-exclamation-triangle me-2"></i>Erro ao carregar recurso</h5>
+                <h5><i class="fa fa-exclamation-triangle me-2"></i>Erro ao carregar recurso</h5>
                 <p>{{ error }}</p>
                 <button @click="carregarRecurso" class="btn btn-sm btn-outline-danger">
                     Tentar novamente
@@ -39,20 +41,20 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h4 class="mb-0">
-                                <i class="bi bi-file-text me-2"></i>
+                                <i class="fa-solid fa-file-text me-2"></i>
                                 {{ recurso.titulo }}
                             </h4>
                             <small class="opacity-75">
-                                Criado em {{ formatarData(recurso.data_criacao) }}
+                                Criado em {{ formatarData(recurso.data) }}
                             </small>
                         </div>
                         <div class="btn-group">
                             <router-link :to="{ name: 'ResourceEdit', params: { id: recurso.id } }"
                                 class="btn btn-light">
-                                <i class="bi bi-pencil me-1"></i> Editar
+                                <i class="fa-solid fa-pencil me-1"></i> Editar
                             </router-link>
                             <button @click="confirmarExclusao" class="btn btn-outline-light">
-                                <i class="bi bi-trash me-1"></i> Excluir
+                                <i class="fa-solid fa-trash me-1"></i> Excluir
                             </button>
                         </div>
                     </div>
@@ -94,7 +96,7 @@
                     <!-- Conteúdo do recurso -->
                     <div class="mb-4">
                         <h5 class="border-bottom pb-2 mb-3">
-                            <i class="bi bi-card-text me-2"></i>
+                            <i class="fa-solid fa-card-text me-2"></i>
                             Conteúdo
                         </h5>
                         <div class="content-box p-3 bg-light rounded">
@@ -102,11 +104,11 @@
                         </div>
                     </div>
 
-                    <!-- Seção de Subrecursos (RF #2) -->
+                    <!-- Seção de Subrecursos -->
                     <div class="subrecursos-section">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h5 class="mb-0">
-                                <i class="bi bi-list-task me-2"></i>
+                                <i class="fa fa-list-task me-2"></i>
                                 Subrecursos
                                 <span class="badge bg-secondary ms-2">
                                     {{ subrecursos.length }}
@@ -114,7 +116,7 @@
                             </h5>
                             <button @click="mostrarFormSubrecurso = true" class="btn btn-primary"
                                 :disabled="carregandoSubrecursos">
-                                <i class="bi bi-plus-circle me-1"></i>
+                                <i class="fa-solid fa-plus-circle me-1"></i>
                                 Novo Subrecurso
                             </button>
                         </div>
@@ -129,7 +131,7 @@
 
                         <div v-else-if="subrecursos.length === 0" class="alert alert-info">
                             <div class="text-center py-3">
-                                <i class="bi bi-inbox display-4 text-muted mb-2"></i>
+                                <i class="fa-solid fa-inbox display-4 text-muted mb-2"></i>
                                 <p class="mb-0">Nenhum subrecurso encontrado</p>
                                 <small>Crie o primeiro clicando no botão acima</small>
                             </div>
@@ -142,19 +144,19 @@
                                     <div>
                                         <h6 class="mb-1">{{ sub.titulo }}</h6>
                                         <small class="text-muted">
-                                            {{ sub.responsavel ? `Responsável: ${sub.responsavel}` : '' }}
+                                            {{ sub.autor ? `Autor: ${sub.autor}` : '' }}
                                             {{ sub.categoria ? ` • ${sub.categoria}` : '' }}
                                         </small>
                                     </div>
                                     <div class="btn-group btn-group-sm">
-                                        <span :class="['badge me-2', badgeClass(sub.status)]">
-                                            {{ formatarStatus(sub.status) }}
+                                        <span :class="['badge me-2', subrecursoBadgeClass(sub.status)]">
+                                            {{ formatarSubrecursoStatus(sub.status) }}
                                         </span>
                                         <button @click="editarSubrecurso(sub)" class="btn btn-outline-warning">
-                                            <i class="bi bi-pencil"></i>
+                                            <i class="fa-solid fa-pencil"></i>
                                         </button>
                                         <button @click="excluirSubrecurso(sub)" class="btn btn-outline-danger">
-                                            <i class="bi bi-trash"></i>
+                                            <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -162,7 +164,7 @@
                                     {{ sub.conteudo.substring(0, 150) }}...
                                 </p>
                                 <small class="text-muted">
-                                    Criado em {{ formatarData(sub.data_criacao) }}
+                                    Criado em {{ formatarData(sub.data) }}
                                 </small>
                             </div>
                         </div>
@@ -176,15 +178,15 @@
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title">
-                                <i class="bi" :class="subrecursoEditando ? 'bi-pencil' : 'bi-plus-circle'"></i>
+                                <i class="fa" :class="subrecursoEditando ? 'fa-pencil' : 'fa-plus-circle'"></i>
                                 {{ subrecursoEditando ? 'Editar Subrecurso' : 'Novo Subrecurso' }}
                             </h5>
                             <button type="button" class="btn-close btn-close-white"
                                 @click="fecharFormSubrecurso"></button>
                         </div>
                         <div class="modal-body">
-                            <SubResourceForm v-if="recurso" :model="subrecursoEditando" :recurso-id="recurso.id"
-                                @save="salvarSubrecurso" @cancel="fecharFormSubrecurso" />
+                            <SubResourceForm v-if="recurso" :model="subrecursoEditando" :resource-id="recurso.id"
+                                @save="salvarSubrecurso" @cancel="fecharFormSubrecurso" @notify="handleNotification" />
                         </div>
                     </div>
                 </div>
@@ -196,25 +198,40 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { recursoService, subrecursoService } from '@/services'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import SubResourceForm from '@/components/SubResourceForm.vue'
-import { useNotification } from '@/composables/useNotification'
+import subrecursoService from '../services/subresourceService'
+import recursoService from '../services/resourceService'
+import DefaultLayout from '../layouts/DefaultLayout.vue'
+import SubResourceForm from '../components/SubResourceForm.vue'
+import Notification from '../components/Notification.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { showSuccess, showError } = useNotification()
 
-// Dados
+// Refs
+const notification = ref(null)
 const recurso = ref(null)
 const subrecursos = ref([])
 const loading = ref(false)
 const carregandoSubrecursos = ref(false)
 const error = ref('')
-
-// Formulário de subrecurso
 const mostrarFormSubrecurso = ref(false)
 const subrecursoEditando = ref(null)
+
+// Funções auxiliares de notificação
+const showSuccess = (message) => {
+    notification.value?.show({ message, type: 'success' })
+}
+
+const showError = (message) => {
+    notification.value?.show({ message, type: 'error' })
+}
+
+const handleNotification = (data) => {
+    notification.value?.show({ 
+        message: data.message, 
+        type: data.type || 'info' 
+    })
+}
 
 // Carregar recurso
 const carregarRecurso = async () => {
@@ -276,6 +293,25 @@ const badgeClass = (status) => {
         em_andamento: 'bg-info',
         concluido: 'bg-success',
         cancelado: 'bg-danger'
+    }
+    return classes[status] || 'bg-secondary'
+}
+
+// Status para subrecursos (baseado no model: ativo, rascunho, inativo)
+const formatarSubrecursoStatus = (status) => {
+    const map = {
+        ativo: 'Ativo',
+        rascunho: 'Rascunho',
+        inativo: 'Inativo'
+    }
+    return map[status] || status
+}
+
+const subrecursoBadgeClass = (status) => {
+    const classes = {
+        ativo: 'bg-success',
+        rascunho: 'bg-warning text-dark',
+        inativo: 'bg-secondary'
     }
     return classes[status] || 'bg-secondary'
 }

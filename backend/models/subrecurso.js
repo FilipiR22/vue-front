@@ -25,7 +25,7 @@ const Subrecurso = sequelize.define('Subrecurso', {
         allowNull: false
     },
     status: {
-        type: DataTypes.ENUM('ativo', 'em_andamentoinativo'),
+        type: DataTypes.ENUM('ativo', 'rascunho', 'inativo'),
         defaultValue: 'ativo',
         allowNull: false
     },
@@ -33,12 +33,15 @@ const Subrecurso = sequelize.define('Subrecurso', {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
     },
-    categoria: {
+    categoria: {  // ← TORNAR OBRIGATÓRIO
         type: DataTypes.STRING(50),
-        allowNull: true,
-        defaultValue: 'geral'
+        allowNull: false,
+        validate: {
+            notEmpty: true,
+            isIn: [['tecnologia', 'educacao', 'saude', 'negocios', 'entretenimento', 'outros']]
+        }
     },
-    auroe: {
+    autor: {
         type: DataTypes.STRING(100),
         allowNull: true
     }
