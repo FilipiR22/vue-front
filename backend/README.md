@@ -1,279 +1,506 @@
-# projetinho-mensagens
+# API Backend - Sistema de Gerenciamento de Recursos
 
-API para cadastro de usuários, autenticação, mensagens e comentários, com gerenciamento por administrador.
-
----
-
-## Requisitos
-
-- Node.js 20+
-- npm
+API RESTful desenvolvida em Node.js com Express para gerenciamento de usuários, recursos e subrecursos, incluindo autenticação JWT e controle de acesso baseado em perfis.
 
 ---
 
-## Instalação
+## 📋 Descrição
 
-1. Instale as dependências:
-   ```bash
-   npm install
-   ```
-
-2. Inicie o servidor:
-   ```bash
-   npm run dev
-   ```
+Esta API fornece endpoints para:
+- **Autenticação**: Login com JWT e refresh tokens
+- **Usuários**: CRUD completo de usuários
+- **Recursos**: Gerenciamento de recursos com filtros avançados
+- **Subrecursos**: Gerenciamento de subrecursos vinculados a recursos
+- **Autorização**: Controle de acesso baseado em perfis (USER/ADMIN)
 
 ---
 
-## Comandos de rebuild
+## 🛠️ Tecnologias
 
-Se precisar reconstruir o projeto (por exemplo, após instalar novas dependências nativas ou alterar arquivos de build), utilize um dos comandos abaixo conforme seu sistema operacional:
+- **Node.js** 20+
+- **Express** 5.1.0
+- **Sequelize** 6.37.7 (ORM)
+- **SQLite3** 5.1.7 (Banco de dados)
+- **JWT** (jsonwebtoken) 9.0.2 (Autenticação)
+- **bcrypt** 6.0.0 (Hash de senhas)
+- **CORS** 2.8.5 (Cross-Origin Resource Sharing)
+- **Nodemon** 3.1.10 (Desenvolvimento)
 
-### Linux
+---
+
+## 📁 Estrutura do Projeto
+
+```
+backend/
+├── models/              # Modelos Sequelize
+│   ├── usuario.js
+│   ├── recurso.js
+│   ├── subrecurso.js
+│   ├── refreshToken.js
+│   └── associacoes.js
+├── routes/              # Rotas da API
+│   ├── auth.js
+│   ├── usuario.js
+│   ├── recurso.js
+│   └── subrecurso.js
+├── middlewares/         # Middlewares
+│   ├── authMiddleware.js
+│   ├── adminMiddleware.js
+│   └── erroMiddleware.js
+├── server.js            # Arquivo principal do servidor
+├── database.js          # Configuração do banco de dados
+├── createAdmin.js       # Script para criar usuário admin
+├── package.json
+└── meubanco.db          # Banco de dados SQLite
+```
+
+---
+
+## ⚙️ Requisitos
+
+- **Node.js** 20 ou superior
+- **npm** (geralmente vem com Node.js)
+
+---
+
+## 🚀 Instalação
+
+### 1. Instalar Dependências
 
 ```bash
-npm run rebuild:linux
+npm install
 ```
 
-### Windows
+### 2. Configurar Variáveis de Ambiente
 
-```powershell
-npm run rebuild:win
-```
+Crie um arquivo `.env` na raiz do projeto `backend/` com o seguinte conteúdo:
 
-Esses comandos vão limpar o cache, remover dependências antigas e reinstalar tudo do zero, além de iniciar o servidor automaticamente.
-
----
-
-## Variáveis de ambiente
-
-Crie um arquivo `.env` na raiz do projeto com o seguinte conteúdo (ajuste se necessário):
-
-```
-JWT_SECRET=senha
+```env
+# JWT Configuration
+JWT_SECRET=sua_chave_secreta_super_segura_aqui
 JWT_EXPIRES_IN=30m
 JWT_REFRESH_EXPIRES_IN=15d
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173
+```
+
+**⚠️ Importante**: Altere `JWT_SECRET` para uma chave secreta forte em produção!
+
+### 3. Inicializar Banco de Dados
+
+O banco de dados SQLite será criado automaticamente na primeira execução. O arquivo `meubanco.db` será gerado na raiz do projeto.
+
+---
+
+## ▶️ Execução
+
+### Modo Desenvolvimento (com hot-reload)
+
+```bash
+npm run dev
+```
+
+O servidor será iniciado na porta **5000** (ou a porta definida em `PORT` no `.env`).
+
+### Modo Produção
+
+```bash
+node server.js
 ```
 
 ---
 
-## Testando a API
+## 🔧 Scripts Disponíveis
 
-Você pode testar a API usando ferramentas como [Postman](https://www.postman.com/) ou [Insomnia](https://insomnia.rest/), ou ainda via `curl` no terminal.
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Inicia o servidor em modo desenvolvimento com nodemon |
+| `npm run rebuild:linux` | Limpa cache, remove node_modules e reinstala (Linux/Mac) |
+| `npm run rebuild:win` | Limpa cache, remove node_modules e reinstala (Windows) |
 
-### 1. Cadastro de Usuário
+---
 
-- **POST** `/usuario`
+## 📡 Endpoints da API
+
+### Base URL
+```
+http://localhost:5000/api
+```
+
+### Health Check
+
+- **GET** `/api/health`
+  - Verifica se o servidor está online
+  - **Resposta**: Status do servidor e banco de dados
+
+---
+
+### 🔐 Autenticação
+
+#### Login
+- **POST** `/api/auth/login`
 - **Body:**
   ```json
   {
-    "nome": "João",
-    "email": "joao@email.com",
-    "senha": "123456"
+    "email": "usuario@email.com",
+    "senha": "senha123"
   }
   ```
-- **Resposta esperada:** 201 Created
+- **Resposta 200:**
+  ```json
+  {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+  ```
+
+#### Refresh Token
+- **POST** `/api/auth/refresh`
+- **Body:**
+  ```json
+  {
+    "refreshToken": "seu_refresh_token_aqui"
+  }
+  ```
+- **Resposta 200:**
+  ```json
+  {
+    "token": "novo_access_token"
+  }
+  ```
+
+**⚠️ Importante**: Todas as rotas protegidas requerem o header:
+```
+Authorization: Bearer SEU_ACCESS_TOKEN
+```
+
+---
+
+### 👤 Usuários
+
+#### Criar Usuário
+- **POST** `/api/usuarios`
+- **Body:**
+  ```json
+  {
+    "nome": "João Silva",
+    "email": "joao@email.com",
+    "senha": "senha123"
+  }
+  ```
+- **Resposta 201:**
   ```json
   {
     "id": 1,
-    "nome": "João",
-    "email": "joao@email.com",
-    "perfil": "USER"
+    "nome": "João Silva",
+    "email": "joao@email.com"
   }
   ```
 
-### 2. Login
+#### Listar Usuários
+- **GET** `/api/usuarios`
+- **Resposta 200:** Array de usuários
 
-- **POST** `/auth/login`
+#### Buscar Usuário por ID
+- **GET** `/api/usuarios/:id`
+- **Resposta 200:** Dados do usuário
+
+#### Atualizar Usuário
+- **PUT** `/api/usuarios/:id`
 - **Body:**
   ```json
   {
-    "email": "joao@email.com",
-    "senha": "123456"
-  }
-  ```
-- **Resposta esperada:** 200 OK
-  ```json
-  {
-    "token": "SEU_TOKEN_JWT",
-    "refreshToken": "SEU_REFRESH_TOKEN"
+    "nome": "João Silva Atualizado",
+    "email": "joao.novo@email.com"
   }
   ```
 
-Use o token JWT retornado no login em todas as rotas protegidas:
-```
-Authorization: Bearer SEU_TOKEN_JWT
-```
+#### Deletar Usuário
+- **DELETE** `/api/usuarios/:id`
+- **Resposta 204:** No Content
 
-### 3. Refresh Token
+---
 
-- **POST** `/auth/refresh`
+### 📚 Recursos
+
+**Todas as rotas de recursos requerem autenticação.**
+
+#### Criar Recurso
+- **POST** `/api/recursos`
+- **Headers:** `Authorization: Bearer TOKEN`
 - **Body:**
   ```json
   {
-    "refreshToken": "SEU_REFRESH_TOKEN"
+    "titulo": "Título do Recurso",
+    "conteudo": "Conteúdo detalhado do recurso",
+    "categoria": "Categoria do recurso",
+    "autor": "Nome do Autor",
+    "status": "ativo",
+    "data": "2024-01-15T10:00:00Z"
   }
   ```
-- **Resposta esperada:** 200 OK
-  ```json
-  {
-    "token": "NOVO_ACCESS_TOKEN"
-  }
-  ```
+- **Campos obrigatórios:** `titulo`, `conteudo`, `categoria`, `autor`
+- **Resposta 201:** Recurso criado
+
+#### Listar Recursos
+- **GET** `/api/recursos`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Query Parameters:**
+  - `status` - Filtrar por status (ex: `ativo`, `inativo`)
+  - `categoria` - Filtrar por categoria
+  - `data_inicio` - Data inicial (formato ISO)
+  - `data_fim` - Data final (formato ISO)
+  - `texto` - Busca textual em título e conteúdo
+  - `autor` - Filtrar por autor
+- **Resposta 200:** Array de recursos do usuário autenticado
+
+#### Buscar Recurso por ID
+- **GET** `/api/recursos/:id`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Resposta 200:** Dados do recurso
+
+#### Atualizar Recurso
+- **PUT** `/api/recursos/:id`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Body:** Campos a atualizar (todos opcionais)
+- **Resposta 200:** Recurso atualizado
+
+#### Deletar Recurso
+- **DELETE** `/api/recursos/:id`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Resposta 204:** No Content
 
 ---
 
-## Rotas de Usuário
+### 📝 Subrecursos
 
-- **GET** `/usuario`  
-  Lista todos os usuários.  
-  **Resposta:** 200 OK
+**Todas as rotas de subrecursos requerem autenticação.**
 
-- **GET** `/usuario/{id}`  
-  Busca usuário por ID.  
-  **Resposta:** 200 OK ou 404 se não encontrado.
-
-- **PUT** `/usuario/{id}`  
-  Atualiza nome/email do usuário.  
-  **Body:**
+#### Criar Subrecurso
+- **POST** `/api/subrecursos`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Body:**
   ```json
   {
-    "nome": "Novo Nome",
-    "email": "novo@email.com"
+    "idrecurso": 1,
+    "titulo": "Título do Subrecurso",
+    "conteudo": "Conteúdo do subrecurso",
+    "status": "pendente",
+    "categoria": "geral",
+    "autor": "Nome do Autor"
   }
   ```
-  **Resposta:** 200 OK
+- **Campos obrigatórios:** `idrecurso`, `titulo`, `conteudo`
+- **Resposta 201:** Subrecurso criado
 
-- **DELETE** `/usuario/{id}`  
-  Remove usuário.  
-  **Resposta:** 204 No Content
+#### Listar Subrecursos
+- **GET** `/api/subrecursos`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Query Parameters:**
+  - `idrecurso` - Filtrar por recurso pai (obrigatório para ver subrecursos específicos)
+  - `status` - Filtrar por status
+  - `categoria` - Filtrar por categoria
+  - `autor` - Filtrar por autor
+  - `data_inicio` - Data inicial
+  - `data_fim` - Data final
+  - `search` - Busca textual em título e conteúdo
+- **Resposta 200:** Array de subrecursos
+
+#### Buscar Subrecurso por ID
+- **GET** `/api/subrecursos/:id`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Resposta 200:** Dados do subrecurso
+
+#### Atualizar Subrecurso
+- **PUT** `/api/subrecursos/:id`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Body:** Campos a atualizar
+- **Resposta 200:** Subrecurso atualizado
+
+#### Deletar Subrecurso
+- **DELETE** `/api/subrecursos/:id`
+- **Headers:** `Authorization: Bearer TOKEN`
+- **Resposta 204:** No Content
 
 ---
 
-## Rotas de Mensagens
+## 🔒 Autenticação e Autorização
 
-- **POST** `/mensagens`  
-  Cria mensagem (autenticado).  
-  **Body:**
-  ```json
-  {
-    "titulo": "Título",
-    "conteudo": "Conteúdo da mensagem"
-  }
-  ```
-  **Resposta:** 201 Created
+### Sistema de Tokens
 
-- **GET** `/mensagens`  
-  Lista mensagens do usuário (ou todas, se admin).  
-  **Resposta:** 200 OK
+- **Access Token**: Token JWT de curta duração (padrão: 30 minutos)
+- **Refresh Token**: Token JWT de longa duração (padrão: 15 dias)
 
-- **GET** `/mensagens/{id}`  
-  Busca mensagem específica.  
-  **Resposta:** 200 OK ou 404
+### Perfis de Usuário
 
-- **PUT** `/mensagens/{id}`  
-  Atualiza mensagem (dono ou admin).  
-  **Body:**
-  ```json
-  {
-    "conteudo": "Novo conteúdo"
-  }
-  ```
-  **Resposta:** 200 OK
+- **USER**: Usuário comum - pode gerenciar apenas seus próprios recursos
+- **ADMIN**: Administrador - tem acesso total a todos os recursos
 
-- **PATCH** `/mensagens/{id}`  
-  Atualiza parcialmente mensagem.  
-  **Body:**  
-  ```json
-  {
-    "titulo": "Novo título"
-  }
-  ```
-  **Resposta:** 200 OK
+### Middleware de Autenticação
 
-- **DELETE** `/mensagens/{id}`  
-  Remove mensagem (dono ou admin).  
-  **Resposta:** 204 No Content
+Todas as rotas de recursos e subrecursos são protegidas pelo `authMiddleware`, que:
+1. Verifica a presença do token JWT no header `Authorization`
+2. Valida o token
+3. Adiciona os dados do usuário em `req.usuario`
+
+### Permissões
+
+- **Recursos**: Cada usuário só pode ver/editar/deletar seus próprios recursos
+- **Subrecursos**: Usuários só podem gerenciar subrecursos de recursos que possuem
+- **Admin**: Tem acesso total a todos os recursos e subrecursos
 
 ---
 
-## Rotas de Comentários
+## 📊 Códigos de Resposta HTTP
 
-- **POST** `/mensagens/{idmensagem}/comentarios`  
-  Adiciona comentário a uma mensagem.  
-  **Body:**
-  ```json
-  {
-    "conteudo": "Comentário legal!"
-  }
-  ```
-  **Resposta:** 201 Created
-
-- **GET** `/mensagens/{idmensagem}/comentarios`  
-  Lista comentários da mensagem.  
-  **Resposta:** 200 OK
-
-- **PUT** `/mensagens/{idmensagem}/comentarios/{idComentario}`  
-  Atualiza comentário (dono ou admin).  
-  **Body:**
-  ```json
-  {
-    "conteudo": "Comentário editado"
-  }
-  ```
-  **Resposta:** 200 OK
-
-- **DELETE** `/mensagens/{idmensagem}/comentarios/{idComentario}`  
-  Remove comentário (dono ou admin).  
-  **Resposta:** 204 No Content
+| Código | Significado | Descrição |
+|--------|-------------|-----------|
+| 200 | OK | Requisição bem-sucedida |
+| 201 | Created | Recurso criado com sucesso |
+| 204 | No Content | Recurso deletado (sem corpo de resposta) |
+| 400 | Bad Request | Dados inválidos na requisição |
+| 401 | Unauthorized | Token ausente ou inválido |
+| 403 | Forbidden | Sem permissão para a ação |
+| 404 | Not Found | Recurso não encontrado |
+| 422 | Unprocessable Entity | Erro de validação |
+| 500 | Internal Server Error | Erro interno do servidor |
 
 ---
 
-## Códigos de resposta e exemplos de erro
+## 🧪 Exemplos de Uso
 
-| Código | Situação                | Exemplo de resposta                                 |
-|--------|------------------------|-----------------------------------------------------|
-| 401    | Não autenticado        | `{"error": "Token JWT ausente ou inválido"}`        |
-| 403    | Acesso não permitido   | `{"error": "Você não tem permissão para isso"}`     |
-| 404    | Recurso não encontrado | `{"error": "Mensagem/Comentário não encontrado"}`   |
-| 422    | Falha de validação     | `{"errors": {"campo": ["Campo obrigatório."]}}`     |
-| 201    | Criado                 | Recurso criado (ver exemplos acima)                 |
-| 200    | OK                     | Recurso retornado/atualizado                        |
-| 204    | No Content             | Recurso removido, sem corpo de resposta             |
-
----
-
-## Dicas para testar
-
-- Sempre envie o header `Authorization: Bearer SEU_TOKEN_JWT` nas rotas protegidas.
-- Use o refresh token para renovar o access token antes de expirar.
-- Teste todos os fluxos: cadastro, login, criação, edição, deleção e listagem.
-- Para testar como admin, crie um usuário com perfil `ADMIN` (ajuste manualmente no banco ou use um endpoint/admin script).
-
----
-
-## Observações
-
-- O campo `perfil` define se o usuário é `USER` ou `ADMIN`.
-- O admin tem permissões totais sobre mensagens e comentários.
-- O refresh token também expira (veja o tempo em `.env`).
-- Se o refresh token expirar ou for inválido, será necessário fazer login novamente.
-
----
-
-## Exemplo de uso com  
+### Exemplo 1: Cadastro e Login
 
 ```bash
-# Cadastro de usuário
-curl -X POST http://localhost:3000/usuario -H "Content-Type: application/json" -d '{"nome":"João","email":"joao@email.com","senha":"123456"}'
+# 1. Cadastrar usuário
+curl -X POST http://localhost:5000/api/usuarios \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "João Silva",
+    "email": "joao@email.com",
+    "senha": "senha123"
+  }'
 
-# Login
-curl -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d '{"email":"joao@email.com","senha":"123456"}'
+# 2. Fazer login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "joao@email.com",
+    "senha": "senha123"
+  }'
+```
 
-# Criar mensagem
-curl -X POST http://localhost:3000/mensagens -H "Authorization: Bearer SEU_TOKEN_JWT" -H "Content-Type: application/json" -d '{"titulo":"Oi","conteudo":"Primeira mensagem"}'
+### Exemplo 2: Criar Recurso
+
+```bash
+curl -X POST http://localhost:5000/api/recursos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
+  -d '{
+    "titulo": "Meu Primeiro Recurso",
+    "conteudo": "Conteúdo detalhado aqui",
+    "categoria": "Tecnologia",
+    "autor": "João Silva",
+    "status": "ativo"
+  }'
+```
+
+### Exemplo 3: Listar Recursos com Filtros
+
+```bash
+curl -X GET "http://localhost:5000/api/recursos?status=ativo&categoria=Tecnologia&texto=primeiro" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN"
+```
+
+### Exemplo 4: Criar Subrecurso
+
+```bash
+curl -X POST http://localhost:5000/api/subrecursos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
+  -d '{
+    "idrecurso": 1,
+    "titulo": "Subrecurso 1",
+    "conteudo": "Conteúdo do subrecurso",
+    "status": "pendente"
+  }'
 ```
 
 ---
 
-Pronto! Agora você tem tudo para testar todas as funcionalidades da API.
+## 🗄️ Banco de Dados
+
+### SQLite
+
+O projeto utiliza SQLite como banco de dados. O arquivo `meubanco.db` é criado automaticamente na primeira execução.
+
+### Modelos Principais
+
+- **Usuario**: Usuários do sistema
+- **Recurso**: Recursos principais
+- **Subrecurso**: Subrecursos vinculados a recursos
+- **RefreshToken**: Tokens de refresh para autenticação
+
+### Sincronização
+
+O banco de dados é sincronizado automaticamente na inicialização do servidor. Em modo desenvolvimento (`NODE_ENV=development`), o Sequelize pode alterar a estrutura das tabelas automaticamente.
+
+---
+
+## 🔧 Configuração Avançada
+
+### CORS
+
+O CORS está configurado para aceitar requisições do frontend. Por padrão, aceita requisições de `http://localhost:5173`. Para alterar, configure a variável `CORS_ORIGIN` no `.env`.
+
+### Logging
+
+O servidor registra todas as requisições no console com timestamp e método HTTP.
+
+### Tratamento de Erros
+
+O servidor possui middleware global de tratamento de erros que:
+- Captura erros de validação do Sequelize
+- Trata erros de autenticação JWT
+- Retorna mensagens de erro apropriadas
+
+---
+
+## 📝 Observações Importantes
+
+1. **Segurança**: Em produção, sempre use uma `JWT_SECRET` forte e única
+2. **Banco de Dados**: O SQLite é adequado para desenvolvimento. Para produção, considere PostgreSQL ou MySQL
+3. **Refresh Tokens**: Os refresh tokens são armazenados no banco de dados para permitir revogação
+4. **Permissões**: Usuários comuns só podem gerenciar seus próprios recursos
+5. **Validação**: Todos os campos obrigatórios são validados antes de salvar no banco
+
+---
+
+## 🐛 Troubleshooting
+
+### Erro: "Token JWT ausente ou inválido"
+- Verifique se o header `Authorization: Bearer TOKEN` está presente
+- Confirme que o token não expirou
+- Verifique se `JWT_SECRET` está configurado corretamente
+
+### Erro: "Banco de dados não encontrado"
+- O banco será criado automaticamente na primeira execução
+- Verifique permissões de escrita na pasta do projeto
+
+### Erro: "Porta já em uso"
+- Altere a porta no arquivo `.env` ou pare o processo que está usando a porta 5000
+
+---
+
+## 📄 Licença
+
+Este projeto é parte de um sistema de gerenciamento de recursos desenvolvido para fins educacionais.
+
+---
+
+**Desenvolvido com ❤️ usando Node.js e Express**
