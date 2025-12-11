@@ -4,11 +4,20 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
-                    <!-- Filtro por título/conteúdo/autor -->
+                    <!-- Filtro por texto (título/conteúdo) -->
                     <div class="col-md-3">
                         <input 
-                            v-model.lazy="filters.search" 
-                            placeholder="🔍 Pesquisar (título/conteúdo/autor)..." 
+                            v-model="filters.texto"
+                            placeholder="🔍 Pesquisar (título/conteúdo)..." 
+                            class="form-control" 
+                        />
+                    </div>
+                    
+                    <!-- Filtro por autor -->
+                    <div class="col-md-2">
+                        <input 
+                            v-model="filters.autor"
+                            placeholder="👤 Pesquisar autor..." 
                             class="form-control" 
                         />
                     </div>
@@ -284,7 +293,8 @@ const recursoIdParaSubrecurso = ref(null)
 
 // Filtros
 const filters = reactive({
-    search: '',
+    texto: '',
+    autor: '',
     status: '',
     categoria: '',
     data_inicio: '',
@@ -348,7 +358,8 @@ const fetchList = async () => {
         // Construir params para API
         const params = {}
         
-        if (filters.search) params.search = filters.search
+        if (filters.texto) params.texto = filters.texto
+        if (filters.autor) params.autor = filters.autor
         if (filters.status) params.status = filters.status
         if (filters.categoria) params.categoria = filters.categoria
         if (filters.data_inicio) params.data_inicio = filters.data_inicio
@@ -469,11 +480,16 @@ onMounted(() => {
     fetchList()
 })
 
-// Watch para filtros (com debounce)
+// Watch para filtros (com debounce de 300ms para melhor experiência)
 let filterTimeout
 watch(filters, () => {
+    // Cancelar o timeout anterior para evitar múltiplas chamadas
     clearTimeout(filterTimeout)
-    filterTimeout = setTimeout(fetchList, 500)
+    
+    // Criar um novo timeout para buscar após 300ms sem digitação
+    filterTimeout = setTimeout(() => {
+        fetchList()
+    }, 300)
 }, { deep: true })
 </script>
 

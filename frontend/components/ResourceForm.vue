@@ -225,7 +225,7 @@ const form = reactive({
     autor: '',
     categoria: '',
     conteudo: '',
-    data: new Date().toISOString(),
+    data: '',
     status: 'ativo'
 })
 

@@ -13,7 +13,7 @@ router.post('/', authMiddleware, async (req, res) => {
     console.log('Usuário autenticado:', req.usuario);
     console.log('Body recebido:', req.body);
 
-    const { titulo, conteudo, status = 'ativo', categoria, autor } = req.body;
+    const { titulo, conteudo, status = 'ativo', categoria, autor, data } = req.body;
 
     // Validação dos campos obrigatórios
     const errors = {};
@@ -44,7 +44,7 @@ router.post('/', authMiddleware, async (req, res) => {
             categoria: categoria.trim(),
             status: status,
             idusuario: req.usuario.id, // ← ESSENCIAL: vem do authMiddleware
-            data: new Date()
+            data: data
         });
 
         // Retornar resposta formatada
@@ -91,10 +91,10 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
-// ==================== LISTAR RECURSOS ====================
+// routes/recursoRoutes.js - Apenas a parte da LISTAR RECURSOS corrigida
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const { status, categoria, data_inicio, data_fim, search } = req.query;
+        const { status, categoria, data_inicio, data_fim, texto, autor } = req.query;
         const where = {};
 
         // FILTRO: Por usuário (cada usuário só vê seus próprios recursos)
@@ -121,13 +121,28 @@ router.get('/', authMiddleware, async (req, res) => {
             }
         }
 
-        // FILTRO 4: Busca textual
-        if (search && search.trim()) {
-            where[Op.or] = [
-                { titulo: { [Op.iLike]: `%${search.trim()}%` } },
-                { conteudo: { [Op.iLike]: `%${search.trim()}%` } },
-                { autor: { [Op.iLike]: `%${search.trim()}%` } }
-            ];
+        // FILTRO 4: Busca por texto (título E conteúdo)
+        const conditions = [];
+        
+        if (texto && texto.trim()) {
+            const searchTerm = `%${texto.trim()}%`;
+            conditions.push({
+                [Op.or]: [
+                    { titulo: { [Op.like]: searchTerm } },
+                    { conteudo: { [Op.like]: searchTerm } }
+                ]
+            });
+        }
+
+        // FILTRO 5: Busca por autor (campo separado)
+        if (autor && autor.trim()) {
+            const authorTerm = `%${autor.trim()}%`;
+            conditions.push({ autor: { [Op.like]: authorTerm } });
+        }
+
+        // Combina todas as condições com AND
+        if (conditions.length > 0) {
+            where[Op.and] = conditions;
         }
 
         const recursos = await Recurso.findAll({
@@ -183,6 +198,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 // ==================== ATUALIZAR RECURSO ====================
+// ==================== ATUALIZAR RECURSO ====================
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
         // Buscar recurso verificando se pertence ao usuário
@@ -197,7 +213,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Recurso não encontrado' });
         }
 
-        const { titulo, conteudo, status, categoria, autor } = req.body;
+        const { titulo, conteudo, status, categoria, autor, data } = req.body;
 
         // Validação
         const errors = {};
@@ -216,6 +232,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
         if (status !== undefined) recurso.status = status;
         if (categoria !== undefined) recurso.categoria = categoria.trim();
         if (autor !== undefined) recurso.autor = autor.trim();
+        
+        // Adicione esta linha para permitir atualização da data
+        if (data !== undefined) recurso.data = data;
 
         await recurso.save();
 

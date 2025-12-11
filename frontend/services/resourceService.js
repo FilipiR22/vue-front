@@ -92,7 +92,11 @@ export default {
     },
     
     search(text) {
-        return this.list({ search: text })
+        return this.list({ texto: text })
+    },
+    
+    searchByAuthor(autor) {
+        return this.list({ autor })
     },
     
     // Tratamento de erros centralizado
